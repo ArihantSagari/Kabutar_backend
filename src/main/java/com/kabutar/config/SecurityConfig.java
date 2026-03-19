@@ -75,6 +75,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()   // IMPORTANT
+                        .requestMatchers("/actuator/**").permitAll()   // ✅ ADD THIS
+                        .requestMatchers("/").permitAll()              // ✅ ADD THIS
 
                         .requestMatchers("/chat/start").authenticated()
                         .anyRequest().authenticated()
