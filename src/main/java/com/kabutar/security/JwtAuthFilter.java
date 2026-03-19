@@ -29,14 +29,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // IMPORTANT: Skip authentication endpoints
-        if (path.startsWith("/auth")) {
+        // ✅ Skip public endpoints
+        if (path.startsWith("/auth") ||
+            path.startsWith("/actuator") ||
+            path.startsWith("/ws")) {
+
             filterChain.doFilter(request, response);
             return;
         }
 
         String authHeader = request.getHeader("Authorization");
 
+        // ✅ No token → just continue (DON'T BLOCK)
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -49,7 +53,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String userId = jwtService.extractUserId(token);
 
             if (userId != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+                SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userId, null, null);
@@ -58,9 +62,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
 
         } catch (Exception e) {
-
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"error\":\"Invalid token\"}");
+            // ❗ DO NOT BLOCK — just ignore invalid token
+            filterChain.doFilter(request, response);
             return;
         }
 
