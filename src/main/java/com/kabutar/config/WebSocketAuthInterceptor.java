@@ -10,8 +10,6 @@ import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
@@ -34,36 +32,46 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 
-            List<String> authHeaders = accessor.getNativeHeader("Authorization");
+            String token = null;
 
-            if (authHeaders == null || authHeaders.isEmpty()) {
-                throw new AccessDeniedException("Missing Authorization header");
+            // ✅ 1. Try header (optional)
+            String authHeader = accessor.getFirstNativeHeader("Authorization");
+
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.substring(7);
             }
 
-            String bearer = authHeaders.get(0);
+            // ✅ 2. Fallback → query param (MAIN FIX)
+            if (token == null) {
 
-            if (!bearer.startsWith("Bearer ")) {
-                throw new AccessDeniedException("Invalid Authorization format");
+                String query = accessor.getSessionAttributes() != null
+                        ? accessor.getSessionAttributes().toString()
+                        : "";
+
+                if (query.contains("token=")) {
+                    token = query.split("token=")[1].split("[&}]")[0];
+                }
             }
 
-            String token = bearer.substring(7);
+            // ❌ Still no token
+            if (token == null) {
+                throw new AccessDeniedException("Missing token");
+            }
 
             try {
 
-                // ✔ Validate FIRST
                 if (!jwtService.validateToken(token)) {
                     throw new AccessDeniedException("Invalid token");
                 }
 
-                String username = jwtService.extractUserId(token);
+                String userId = jwtService.extractUserId(token);
 
-                // ✔ Set authenticated user
-                accessor.setUser(() -> username);
+                accessor.setUser(() -> userId);
 
-                log.info("WebSocket authenticated user={}", username);
+                log.info("✅ WebSocket authenticated user={}", userId);
 
             } catch (Exception e) {
-                log.warn("WebSocket authentication failed: {}", e.getMessage());
+                log.warn("❌ WebSocket authentication failed: {}", e.getMessage());
                 throw new AccessDeniedException("Unauthorized WebSocket");
             }
         }
