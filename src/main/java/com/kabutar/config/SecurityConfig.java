@@ -79,6 +79,10 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
 
+            // 🔥 CRITICAL FIX
+            .formLogin(form -> form.disable())
+            .httpBasic(basic -> basic.disable())
+
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
@@ -93,14 +97,10 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
 
-                // ✅ TEMP: allow everything (until frontend stable)
+                // ✅ Allow all for now
                 .anyRequest().permitAll()
-
-                // 🔒 Later you can use:
-                // .anyRequest().authenticated()
             )
 
-            // ✅ IMPORTANT: add JWT filter ONLY if token exists
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
