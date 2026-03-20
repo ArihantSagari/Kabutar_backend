@@ -46,8 +46,10 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "http://16.171.199.94:3000"
-        ));
+                "http://16.171.199.94:3000",
+                "https://kabutar-frontend.vercel.app", // ✅ ADD THIS
+                "https://*.ngrok-free.dev" // ✅ optional
+            ));
 
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS"
