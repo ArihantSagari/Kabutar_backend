@@ -31,7 +31,12 @@ public class SecurityConfig {
     public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
-
+    @Bean
+    public org.springframework.security.core.userdetails.UserDetailsService userDetailsService() {
+        return username -> {
+            throw new org.springframework.security.core.userdetails.UsernameNotFoundException("User not found");
+        };
+    }
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
