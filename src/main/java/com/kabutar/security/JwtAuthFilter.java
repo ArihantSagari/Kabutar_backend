@@ -7,11 +7,13 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -30,7 +32,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // ✅ VERY IMPORTANT: skip CORS preflight
+        // ✅ Skip OPTIONS (CORS preflight)
         if (HttpMethod.OPTIONS.matches(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
@@ -47,7 +49,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-        // ✅ No token → allow (public APIs)
+        // ✅ No token → just continue (public allowed)
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -63,15 +65,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userId, null, null);
+                        new UsernamePasswordAuthenticationToken(
+                                userId,
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                        );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
 
         } catch (Exception e) {
-            // ✅ Do NOT block request if token invalid
-            filterChain.doFilter(request, response);
-            return;
+
+            // 🔥 IMPORTANT: log error (helps in EC2 debugging)
+            System.out.println("❌ JWT ERROR: " + e.getMessage());
+
+            // Do NOT block request (important for public endpoints)
         }
 
         filterChain.doFilter(request, response);

@@ -1,18 +1,16 @@
 package com.kabutar.security;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+
 import java.security.Key;
 import java.util.Date;
 
-/**
- * Handles JWT token generation and validation.
- */
 @Service
 public class JwtService {
 
@@ -22,48 +20,35 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long expiration;
 
-    /**
-     * Create signing key
-     */
-    private Key getSigningKey() {
+    private Key signingKey;
 
-        return Keys.hmacShaKeyFor(secret.getBytes());
+    /**
+     * Initialize signing key once
+     */
+    @PostConstruct
+    public void init() {
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     /**
-     * Generate JWT access token
+     * Generate JWT token
      */
     public String generateToken(String userId) {
 
         return Jwts.builder()
-
                 .setSubject(userId)
-
                 .setIssuedAt(new Date())
-
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
-
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-
+                .signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
     /**
-     * Extract userId from token
+     * Extract userId
      */
     public String extractUserId(String token) {
 
-        return Jwts.parserBuilder()
-
-                .setSigningKey(getSigningKey())
-
-                .build()
-
-                .parseClaimsJws(token)
-
-                .getBody()
-
-                .getSubject();
+        return getClaims(token).getSubject();
     }
 
     /**
@@ -72,21 +57,33 @@ public class JwtService {
     public boolean validateToken(String token) {
 
         try {
-
-            Jwts.parserBuilder()
-
-                    .setSigningKey(getSigningKey())
-
-                    .build()
-
-                    .parseClaimsJws(token);
-
+            getClaims(token);
             return true;
 
-        } catch (Exception e) {
-
-            return false;
-
+        } catch (ExpiredJwtException e) {
+            System.out.println("❌ JWT expired");
+        } catch (UnsupportedJwtException e) {
+            System.out.println("❌ Unsupported JWT");
+        } catch (MalformedJwtException e) {
+            System.out.println("❌ Malformed JWT");
+        } catch (SecurityException e) {
+            System.out.println("❌ Invalid signature");
+        } catch (IllegalArgumentException e) {
+            System.out.println("❌ Empty JWT claims");
         }
+
+        return false;
+    }
+
+    /**
+     * Internal helper
+     */
+    private Claims getClaims(String token) {
+
+        return Jwts.parserBuilder()
+                .setSigningKey(signingKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

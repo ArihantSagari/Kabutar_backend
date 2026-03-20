@@ -29,27 +29,21 @@ public class SecurityConfig {
         this.jwtAuthFilter = jwtAuthFilter;
     }
 
-    /**
-     * Password encoder
-     */
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * ✅ FIXED CORS CONFIG
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        // ✅ IMPORTANT: use allowedOriginPatterns (NOT allowedOrigins)
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://16.171.199.94:3000",
                 "https://kabutar-frontend.vercel.app",
+                "https://*.vercel.app",
                 "https://*.ngrok-free.dev"
         ));
 
@@ -68,42 +62,36 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     * ✅ SECURITY CONFIG
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
 
-                .authorizeHttpRequests(auth -> auth
+            .authorizeHttpRequests(auth -> auth
 
-                        // ✅ VERY IMPORTANT (CORS preflight)
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // ✅ Allow preflight
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // ✅ Public endpoints
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/").permitAll()
+                // ✅ Public APIs
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
 
-                        // 🔐 Protected
-                        .requestMatchers("/chat/start").authenticated()
+                // ✅ TEMP: allow everything (until frontend stable)
+                .anyRequest().permitAll()
 
-                        // DEV mode (open)
-                        .anyRequest().permitAll()
-                )
+                // 🔒 Later you can use:
+                // .anyRequest().authenticated()
+            )
 
-                .addFilterBefore(
-                        jwtAuthFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+            // ✅ IMPORTANT: add JWT filter ONLY if token exists
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
