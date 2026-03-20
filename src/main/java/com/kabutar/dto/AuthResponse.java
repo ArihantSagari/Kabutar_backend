@@ -2,16 +2,16 @@ package com.kabutar.dto;
 
 public class AuthResponse {
 
-    private String accessToken;
+    private String Token;
     private String refreshToken;
 
     public AuthResponse(String accessToken, String refreshToken) {
-        this.accessToken = accessToken;
+        this.Token = accessToken;
         this.refreshToken = refreshToken;
     }
 
     public String getAccessToken() {
-        return accessToken;
+        return Token;
     }
 
     public String getRefreshToken() {
