@@ -5,6 +5,7 @@ import com.kabutar.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 
@@ -37,19 +38,20 @@ public class SecurityConfig {
     }
 
     /**
-     * CORS configuration
+     * ✅ FIXED CORS CONFIG
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
+        // ✅ IMPORTANT: use allowedOriginPatterns (NOT allowedOrigins)
+        config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://16.171.199.94:3000",
-                "https://kabutar-frontend.vercel.app", // ✅ ADD THIS
-                "https://*.ngrok-free.dev" // ✅ optional
-            ));
+                "https://kabutar-frontend.vercel.app",
+                "https://*.ngrok-free.dev"
+        ));
 
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS"
@@ -67,7 +69,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Security configuration
+     * ✅ SECURITY CONFIG
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -81,16 +83,20 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+
+                        // ✅ VERY IMPORTANT (CORS preflight)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // ✅ Public endpoints
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/").permitAll()
 
-                        // 🔐 Protected endpoints
+                        // 🔐 Protected
                         .requestMatchers("/chat/start").authenticated()
 
-                        // 🔥 IMPORTANT (DEV MODE)
+                        // DEV mode (open)
                         .anyRequest().permitAll()
                 )
 

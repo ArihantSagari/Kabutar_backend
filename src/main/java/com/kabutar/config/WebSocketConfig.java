@@ -15,21 +15,45 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         this.authInterceptor = authInterceptor;
     }
 
+    /**
+     * Message broker configuration
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
+
+        // ✅ For pub-sub messaging
         config.enableSimpleBroker("/topic", "/queue");
+
+        // ✅ Prefix for sending messages from client
         config.setApplicationDestinationPrefixes("/app");
-        config.setUserDestinationPrefix("/user"); // IMPORTANT for private messaging
+
+        // ✅ Required for user-specific messaging
+        config.setUserDestinationPrefix("/user");
     }
 
+    /**
+     * WebSocket endpoint configuration
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+
         registry
             .addEndpoint("/ws")
-            .setAllowedOriginPatterns("*") // tighten in prod
-            .withSockJS(); // required for SockJS client
+
+            // ✅ IMPORTANT: allow frontend domains (NOT "*")
+            .setAllowedOriginPatterns(
+                "http://localhost:3000",
+                "https://*.vercel.app",
+                "https://*.ngrok-free.dev"
+            )
+
+            // ✅ REQUIRED for SockJS (your frontend uses it)
+            .withSockJS();
     }
 
+    /**
+     * Interceptor for authentication (JWT)
+     */
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(authInterceptor);
